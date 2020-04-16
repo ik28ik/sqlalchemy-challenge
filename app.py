@@ -45,12 +45,15 @@ def welcome():
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/temp/start/end"
+        f"/api/v1.0/temp/<start>/<end>"
     )
 
 
 @app.route("/api/v1.0/precipitation")
 def precipitation():
+
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
     """Return the precipitation data for the last year"""
     # Calculate the date 1 year ago from last date in database
     prev_year = dt.date(2017, 8, 23) - dt.timedelta(days=365)
@@ -59,6 +62,8 @@ def precipitation():
     precipitation = session.query(Measurement.date, Measurement.prcp).\
         filter(Measurement.date >= prev_year).all()
 
+    session.close()
+
     # Dict with date as the key and prcp as the value
     precip = {date: prcp for date, prcp in precipitation}
     return jsonify(precip)
@@ -66,8 +71,13 @@ def precipitation():
 
 @app.route("/api/v1.0/stations")
 def stations():
+
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
     """Return a list of stations."""
     results = session.query(Station.station).all()
+
+    session.close()
 
     # Unravel results into a 1D array and convert to a list
     stations = list(np.ravel(results))
@@ -97,6 +107,8 @@ def temp_monthly():
 def stats(start=None, end=None):
     """Return TMIN, TAVG, TMAX."""
 
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
     # Select statement
     sel = [func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
 
@@ -112,6 +124,8 @@ def stats(start=None, end=None):
     results = session.query(*sel).\
         filter(Measurement.date >= start).\
         filter(Measurement.date <= end).all()
+
+    # session.close()
     # Unravel results into a 1D array and convert to a list
     temps = list(np.ravel(results))
     return jsonify(temps)
